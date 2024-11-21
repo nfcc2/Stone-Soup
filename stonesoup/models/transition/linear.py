@@ -468,10 +468,10 @@ class IntegratedWindowedGaussianProcess(WindowedGaussianProcess):
     @property
     def ndim_state(self):
         return self.window_size + 1
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._initial_var = self.initial_var
+        self._initial_var = self.initial_var  # variance of z(t-L)
         self._pred_time = -1  # saves time of last prediction
 
     def kernel(self, X, Y=None):
@@ -505,19 +505,21 @@ class IntegratedWindowedGaussianProcess(WindowedGaussianProcess):
             if self._pred_time == -1:  # first prediction
                 self._initial_var = self.initial_var
             else:
-                self._initial_var = self._integrated_kernel(pred_time - self.window_size, pred_time - self.window_size)
+                self._initial_var = self.initial_var + self._integrated_kernel(self._pred_time, self._pred_time)
             self._pred_time = pred_time
         elif pred_time < self._pred_time:  # reset
             self._pred_time = pred_time
             self._initial_var = self.initial_var
+        kwargs.pop('pred_time', None)
 
-        base_matrix = super().matrix(pred_time=pred_time, **kwargs)
+        base_matrix = super().matrix(pred_time=self.window_size, **kwargs)
         padded_matrix = np.pad(base_matrix, ((0,1),(0,1)))
-        padded_matrix[-1, -2] = 1  # update mean to be last element that exited window
+        padded_matrix[-1, -1] = 1
         return padded_matrix
 
     def covar(self, **kwargs):
-        base_covar = super().covar(**kwargs)
+        kwargs.pop('pred_time', None)
+        base_covar = super().covar(pred_time=self.window_size, **kwargs)
         covar = np.pad(base_covar, ((0, 1)))
         return covar
 
