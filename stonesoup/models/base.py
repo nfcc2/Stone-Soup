@@ -250,6 +250,8 @@ class GaussianModel(Model):
         """
 
         covar = self.covar(**kwargs)
+        print("rvs covar")
+        print(covar)
 
         # If model has None-type covariance or contains None, it does not represent a Gaussian
         if covar is None or None in covar:
@@ -259,8 +261,6 @@ class GaussianModel(Model):
 
         noise = multivariate_normal.rvs(
             np.zeros(self.ndim), covar, num_samples, random_state=random_state)
-
-        noise = np.atleast_2d(noise)
 
         if self.ndim > 1:
             noise = noise.T  # numpy.rvs method squeezes 1-dimensional matrices to integers
